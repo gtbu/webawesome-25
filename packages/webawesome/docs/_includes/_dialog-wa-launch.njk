@@ -1,0 +1,121 @@
+<wa-dialog label="Web Awesome Sale" id="dialog-site-wide">
+  <div class="wa-stack wa-gap-m">
+    <div class="wa-cluster wa-gap-s">
+      <wa-icon name="badge-percent" style="font-size: 2rem; color: var(--wa-color-brand-600);"></wa-icon>
+      <div>
+        <h2 class="wa-heading-m" style="margin: 0;">Web Awesome is here!</h2>
+        <p class="wa-body-s" style="margin: 0; color: var(--wa-color-text-2);">
+          Celebrate with <strong>20% off</strong> on a Web Awesome Pro plan&hellip; <strong>for life</strong>!
+        </p>
+      </div>
+    </div>
+    <p class="wa-body-m">
+      Unlock Pro-only themes, components, patterns, and great services like the Theme Builder with this special launch offer.
+    </p>
+  </div>
+  <wa-button slot="footer" variant="brand" href="/purchase" class="brand-font" id="dialog-wa-launch-sale-cta">
+    <wa-icon slot="start" variant="regular" name="rocket-launch-sale"></wa-icon>
+    Get Pro + Save 20%
+  </wa-button>
+  <wa-button slot="footer" appearance="plain" data-dialog="close" id="dialog-wa-launch-sale-dismiss">
+    Maybe Later
+  </wa-button>
+</wa-dialog>
+
+<script type="module">
+  (function() {
+    const SITE_DIALOG_ID = 'dialog-site-wide';
+    const SITE_DIALOG_CTA_ID = 'dialog-wa-launch-sale-cta';
+    const SITE_DIALOG_DISMISS_ID = 'dialog-wa-launch-sale-dismiss';
+    const SITE_DIALOG_SEEN_KEY = 'dialog-wa-launch-sale-seen';
+    const SITE_DIALOG_DISMISSED_KEY = 'dialog-wa-launch-sale-dismissed';
+    const SHOW_DELAY_MS = 500;
+    const FALLBACK_TIMEOUT_MS = 100;
+
+    // Early exit if user has seen or dismissed the dialog
+    try {
+      if (localStorage.getItem(SITE_DIALOG_SEEN_KEY) === 'true' || localStorage.getItem(SITE_DIALOG_DISMISSED_KEY) === 'true') {
+        return;
+      }
+    } catch (e) {
+      // localStorage may be disabled or unavailable
+      return;
+    }
+
+    // Wait for DOM and dialog element
+    const dialog = document.getElementById(SITE_DIALOG_ID);
+    if (!dialog) {
+      return;
+    }
+
+    // Helper to check if source matches an element
+    const isSource = (source, element) => element && (source === element || element.contains(source));
+
+    // Initialize dialog functionality
+    const initDialog = () => {
+      const dismissButton = document.getElementById(SITE_DIALOG_DISMISS_ID);
+      const ctaButton = document.getElementById(SITE_DIALOG_CTA_ID);
+      const closeButton = dialog.shadowRoot?.querySelector('[part="close-button"]') || null;
+
+      // Safety check: ensure buttons exist
+      if (!dismissButton || !ctaButton) {
+        return;
+      }
+
+      // Mark as seen when dialog opens
+      dialog.addEventListener('wa-show', () => {
+        try {
+          localStorage.setItem(SITE_DIALOG_SEEN_KEY, 'true');
+        } catch (e) {
+          // localStorage may be disabled
+        }
+      }, { once: true });
+
+      // Prevent closing when clicking the overlay
+      dialog.addEventListener('wa-hide', (event) => {
+        const { source } = event.detail;
+
+        // Allow closing for valid sources
+        if (
+          isSource(source, dismissButton) ||
+          isSource(source, closeButton) ||
+          source === dialog // Escape key or programmatic close
+        ) {
+          try {
+            localStorage.setItem(SITE_DIALOG_DISMISSED_KEY, 'true');
+          } catch (e) {
+            // localStorage may be disabled
+          }
+          return;
+        }
+
+        if (isSource(source, ctaButton)) {
+          try {
+            localStorage.setItem(SITE_DIALOG_SEEN_KEY, 'true');
+          } catch (e) {
+            // localStorage may be disabled
+          }
+          return;
+        }
+
+        // Prevent closing for overlay clicks
+        event.preventDefault();
+      });
+
+      // Show dialog after a short delay to ensure page is loaded
+      setTimeout(() => {
+        dialog.open = true;
+      }, SHOW_DELAY_MS);
+    };
+
+    // Initialize when ready
+    if (customElements.get('wa-dialog')) {
+      initDialog();
+    } else {
+      document.addEventListener('wa-discovery-complete', initDialog, { once: true });
+      // Fallback timeout in case wa-discovery-complete doesn't fire
+      setTimeout(initDialog, FALLBACK_TIMEOUT_MS);
+    }
+  })();
+</script>
+
